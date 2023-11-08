@@ -3,11 +3,11 @@ package scrapper
 import (
 	"context"
 	"fmt"
-	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Scrapper interface {
@@ -38,7 +38,7 @@ func NewDefaultScrapper(chRepo ChannelAuthorizerRepository) Scrapper {
 
 func (s *defaultScrapperImpl) AuthorizeBot(c context.Context, respch chan struct{}) {
 
-	var htmlContent string
+	//var htmlContent string
 
 	//wg.Add(1)
 
@@ -98,47 +98,37 @@ func (s *defaultScrapperImpl) AuthorizeBot(c context.Context, respch chan struct
 
 	fmt.Println("waiting for all countries to be selected")
 
-	//err = chromedp.Run(ctx,
-	//	chromedp.Wait(`div.backdrop`),
-	//)
-	//fmt.Println("stopped waiting")
+	//var countryNameNodes []*cdp.Node
+	//
+	//if err := chromedp.Run(s.ScrapperContext, chromedp.Nodes(`span.country-name`, &countryNameNodes, chromedp.ByQueryAll)); err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println("selected all countries")
+	//
+	//if err != nil {
+	//	fmt.Println("click on country - error")
+	//	log.Fatal(err)
+	//}
+	//
+	//fmt.Println("click on country")
+	//
+	//if err := chromedp.Run(s.ScrapperContext, chromedp.Click(`//span[contains(text(), "Ukraine")]`, chromedp.BySearch, chromedp.NodeVisible)); err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println("after click on country")
+	//
+	//if err != nil {
+	//	fmt.Println("2")
+	//	fmt.Println(err)
+	//	c.Done()
+	//}
 
-	var countryNameNodes []*cdp.Node
-
-	if err := chromedp.Run(s.ScrapperContext, chromedp.Nodes(`span.country-name`, &countryNameNodes, chromedp.ByQueryAll)); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("selected all countries")
-
-	if err != nil {
-		fmt.Println("click on country - error")
-		log.Fatal(err)
-	}
-
-	fmt.Println("click on country")
-
-	err = chromedp.Run(s.ScrapperContext, chromedp.WaitVisible(`//span[contains(text(), "Ukraine")]`))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := chromedp.Run(s.ScrapperContext, chromedp.Click(`//span[contains(text(), "Ukraine")]`, chromedp.NodeVisible)); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("after click on country")
-
-	if err != nil {
-		fmt.Println("2")
-		fmt.Println(err)
-		c.Done()
-	}
-	// 2 - input code, that was sent on user's phone number
 	fmt.Println("before input")
 
 	// Print the HTML content.
 
 	err = chromedp.Run(s.ScrapperContext,
-		chromedp.SendKeys(`input[id="sign-in-phone-number"]`, "987997410"),
+		chromedp.SendKeys(`input[id="sign-in-phone-number"]`, "+380 98 799 74 10 1111111111"),
 	)
 
 	fmt.Println("after input")
@@ -149,8 +139,16 @@ func (s *defaultScrapperImpl) AuthorizeBot(c context.Context, respch chan struct
 		c.Done()
 	}
 
+	var value string
+	err = chromedp.Run(s.ScrapperContext, chromedp.EvaluateAsDevTools(`document.getElementById("sign-in-phone-number").value`, &value))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(value)
+
 	err = chromedp.Run(s.ScrapperContext,
-		chromedp.WaitVisible(`//button[normalize-space(text())="Next"]`),
+		chromedp.Click(`//button[normalize-space(text())="Next"]`),
 	)
 
 	if err != nil {
@@ -159,25 +157,31 @@ func (s *defaultScrapperImpl) AuthorizeBot(c context.Context, respch chan struct
 		c.Done()
 	}
 
-	err = chromedp.Run(s.ScrapperContext, chromedp.OuterHTML("html", &htmlContent))
+	time.Sleep(10 * time.Second)
+
+	err = chromedp.Run(s.ScrapperContext,
+		chromedp.Submit(`//button[normalize-space(text())="Next"]`, chromedp.BySearch),
+	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("why")
 	}
 
-	fmt.Println(htmlContent)
-
-	// Use chromedp to locate and click the button with specific attributes and text content.
-	err = chromedp.Run(s.ScrapperContext,
-		chromedp.Click(`//button[normalize-space(text())="Next"]`),
-	)
-
+	var vvalue string
+	err = chromedp.Run(s.ScrapperContext, chromedp.Text(`label[for="sign-in-phone-number"]`, &vvalue, chromedp.ByQuery))
 	if err != nil {
-		fmt.Println("4")
-		fmt.Println(err)
+		panic(err)
+	}
+
+	fmt.Println(vvalue)
+
+	fmt.Println("yeben'")
+	// 3 - wait...
+
+	err = chromedp.Run(s.ScrapperContext, chromedp.WaitVisible(`#sign-in-code`))
+	if err != nil {
+		fmt.Println("nigga")
 		c.Done()
 	}
-
-	// 3 - wait...
 
 	var activationCode string
 	fmt.Println("Input activation code : ")
